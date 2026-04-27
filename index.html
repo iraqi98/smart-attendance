@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام حضور وانصراف الموظفين | Employee Attendance System</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/face-api.js/0.22.2/face-api.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="light-mode">
+    <div id="loading-overlay">
+        <div class="loader">
+            <div class="spinner"></div>
+            <p>جاري تحميل النظام...</p>
+        </div>
+    </div>
+
+    <div id="login-screen" class="auth-screen">
+        <div class="auth-container">
+            <div class="auth-logo">
+                <i class="fas fa-fingerprint"></i>
+                <h1>Smart Attendance</h1>
+                <p>نظام الحضور والانصراف الذكي</p>
+            </div>
+            
+            <!-- Login Mode Tabs -->
+            <div class="login-tabs" style="display:flex;margin-bottom:25px;border-radius:10px;overflow:hidden;border:1px solid var(--border-color);">
+                <button class="login-tab active" id="tab-admin" onclick="app.switchLoginMode('admin')" style="flex:1;padding:12px;border:none;background:var(--primary);color:#fff;cursor:pointer;font-family:inherit;font-size:15px;">
+                    <i class="fas fa-user-shield"></i> مدير النظام
+                </button>
+                <button class="login-tab" id="tab-employee" onclick="app.switchLoginMode('employee')" style="flex:1;padding:12px;border:none;background:transparent;color:var(--text-color);cursor:pointer;font-family:inherit;font-size:15px;">
+                    <i class="fas fa-user"></i> موظف
+                </button>
+            </div>
+            
+            <!-- Admin Login Form -->
+            <div id="admin-login-form" class="auth-form">
+                <div class="form-group">
+                    <label><i class="fas fa-user"></i> اسم المستخدم</label>
+                    <input type="text" id="login-username" placeholder="أدخل اسم المستخدم" value="admin">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-lock"></i> كلمة المرور</label>
+                    <input type="password" id="login-password" placeholder="أدخل كلمة المرور" value="admin">
+                </div>
+                <button class="btn btn-primary btn-block" onclick="app.login()" style="padding:14px;font-size:16px;margin-top:10px;">
+                    <i class="fas fa-sign-in-alt"></i> تسجيل الدخول
+                </button>
+            </div>
+            
+            <!-- Employee Login Form -->
+            <div id="employee-login-form" class="auth-form hidden">
+                <div class="form-group">
+                    <label><i class="fas fa-id-badge"></i> الرقم الوظيفي</label>
+                    <input type="text" id="emp-login-code" placeholder="أدخل الرقم الوظيفي (مثال: EMP001)">
+                </div>
+                <button class="btn btn-success btn-block" onclick="app.employeeLogin()" style="padding:14px;font-size:16px;margin-top:10px;">
+                    <i class="fas fa-clock"></i> تسجيل الدخول
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="main-app" class="hidden">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-fingerprint"></i>
+                    <span>Smart Attendance</span>
+                </div>
+                <button class="sidebar-toggle" onclick="app.toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item" data-page="employee-portal" onclick="app.navigate('employee-portal')">
+                    <i class="fas fa-user-clock"></i>
+                    <span>بوابة الموظف</span>
+                </a>
+                <a href="#" class="nav-item" data-page="dashboard" onclick="app.navigate('dashboard')">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>لوحة التحكم</span>
+                </a>
+                <a href="#" class="nav-item" data-page="employees" onclick="app.navigate('employees')">
+                    <i class="fas fa-users"></i>
+                    <span>الموظفين</span>
+                </a>
+                <a href="#" class="nav-item" data-page="attendance" onclick="app.navigate('attendance')">
+                    <i class="fas fa-clock"></i>
+                    <span>الحضور والانصراف</span>
+                </a>
+                <a href="#" class="nav-item" data-page="face-auth" onclick="app.navigate('face-auth')">
+                    <i class="fas fa-camera"></i>
+                    <span>بصمة الوجه</span>
+                </a>
+                <a href="#" class="nav-item" data-page="leaves" onclick="app.navigate('leaves')">
+                    <i class="fas fa-calendar-alt"></i>
+                    <span>الإجازات</span>
+                </a>
+                <a href="#" class="nav-item" data-page="reports" onclick="app.navigate('reports')">
+                    <i class="fas fa-file-alt"></i>
+                    <span>التقارير</span>
+                </a>
+                <a href="#" class="nav-item" data-page="backup" onclick="app.navigate('backup')">
+                    <i class="fas fa-database"></i>
+                    <span>النسخ الاحتياطي</span>
+                </a>
+                <a href="#" class="nav-item" data-page="settings" onclick="app.navigate('settings')">
+                    <i class="fas fa-cog"></i>
+                    <span>الإعدادات</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <button class="btn btn-icon" onclick="app.toggleDarkMode()" title="تبديل الوضع">
+                    <i class="fas fa-moon" id="theme-icon"></i>
+                </button>
+                <button class="btn btn-icon" onclick="app.logout()" title="تسجيل الخروج">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="page-title">
+                    <h2 id="page-title">لوحة التحكم</h2>
+                    <p id="current-date"></p>
+                </div>
+                <div class="top-actions">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="بحث سريع..." id="global-search">
+                    </div>
+                    <div class="notifications">
+                        <button class="btn btn-icon" onclick="app.showNotifications()">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge" id="notif-count">0</span>
+                        </button>
+                    </div>
+                    <div class="user-menu">
+                        <img src="https://ui-avatars.com/api/?name=Admin&background=667eea&color=fff" alt="Admin" id="user-avatar">
+                        <span id="user-name">مدير النظام</span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Employee Portal Page -->
+                <section id="page-employee-portal" class="page">
+                    <div class="employee-welcome" style="text-align:center;margin-bottom:30px;">
+                        <h2 id="emp-welcome-name">مرحباً!</h2>
+                        <p id="emp-welcome-info">-</p>
+                    </div>
+                    
+                    <div class="employee-actions" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:30px;">
+                        <div class="card" style="text-align:center;padding:30px;">
+                            <div style="font-size:48px;color:var(--success);margin-bottom:15px;">
+                                <i class="fas fa-sign-in-alt"></i>
+                            </div>
+                            <h3>تسجيل حضور</h3>
+                            <p style="color:var(--text-muted);margin-bottom:20px;">سجل دخولك للعمل</p>
+                            <button class="btn btn-success btn-block" onclick="employeePortal.checkIn()" style="font-size:18px;padding:15px;">
+                                <i class="fas fa-fingerprint"></i> تسجيل الحضور
+                            </button>
+                        </div>
+                        
+                        <div class="card" style="text-align:center;padding:30px;">
+                            <div style="font-size:48px;color:var(--danger);margin-bottom:15px;">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </div>
+                            <h3>تسجيل انصراف</h3>
+                            <p style="color:var(--text-muted);margin-bottom:20px;">سجل خروجك من العمل</p>
+                            <button class="btn btn-danger btn-block" onclick="employeePortal.checkOut()" style="font-size:18px;padding:15px;">
+                                <i class="fas fa-fingerprint"></i> تسجيل الانصراف
+                            </button>
+                        </div>
+                        
+                        <div class="card" style="text-align:center;padding:30px;">
+                            <div style="font-size:48px;color:var(--primary);margin-bottom:15px;">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                            <h3>بصمة الوجه</h3>
+                            <p style="color:var(--text-muted);margin-bottom:20px;">تسجيل الحضور بالوجه</p>
+                            <button class="btn btn-primary btn-block" onclick="app.navigate('face-auth')" style="font-size:18px;padding:15px;">
+                                <i class="fas fa-video"></i> تشغيل الكاميرا
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-history"></i> سجل حضوري</h3>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>وقت الحضور</th>
+                                        <th>وقت الانصراف</th>
+                                        <th>الحالة</th>
+                                        <th>الساعات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="emp-attendance-history">
+                                    <tr><td colspan="5" class="text-center">لا يوجد سجلات</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Dashboard Page -->
+                <section id="page-dashboard" class="page active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon bg-blue">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="total-employees">0</h3>
+                                <p>إجمالي الموظفين</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-green">
+                                <i class="fas fa-user-check"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="today-present">0</h3>
+                                <p>الحاضرون اليوم</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-red">
+                                <i class="fas fa-user-times"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="today-absent">0</h3>
+                                <p>الغائبون اليوم</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon bg-orange">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3 id="today-late">0</h3>
+                                <p>المتأخرون اليوم</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>نسبة الحضور الشهرية</h3>
+                                <button class="btn btn-sm" onclick="dashboard.refreshChart()">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="attendance-chart"></canvas>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3>توزيع الأقسام</h3>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="departments-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>سجل الحضور اليوم</h3>
+                            <button class="btn btn-sm btn-primary" onclick="app.navigate('attendance')">
+                                <i class="fas fa-plus"></i> تسجيل جديد
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>الموظف</th>
+                                        <th>القسم</th>
+                                        <th>وقت الحضور</th>
+                                        <th>وقت الانصراف</th>
+                                        <th>الحالة</th>
+                                        <th>الساعات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="today-attendance-table">
+                                    <tr><td colspan="6" class="text-center">لا يوجد بيانات</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Employees Page -->
+                <section id="page-employees" class="page">
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="employees.openModal()">
+                            <i class="fas fa-plus"></i> إضافة موظف جديد
+                        </button>
+                        <div class="filters">
+                            <select id="dept-filter" onchange="employees.filter()">
+                                <option value="">كل الأقسام</option>
+                            </select>
+                            <input type="text" id="emp-search" placeholder="بحث عن موظف..." onkeyup="employees.filter()">
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الصورة</th>
+                                        <th>الاسم</th>
+                                        <th>الرقم الوظيفي</th>
+                                        <th>القسم</th>
+                                        <th>الوظيفة</th>
+                                        <th>الدور</th>
+                                        <th>تاريخ التعيين</th>
+                                        <th>الراتب</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="employees-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Attendance Page -->
+                <section id="page-attendance" class="page">
+                    <div class="page-actions">
+                        <button class="btn btn-success" onclick="attendance.quickCheckIn()">
+                            <i class="fas fa-sign-in-alt"></i> تسجيل حضور
+                        </button>
+                        <button class="btn btn-danger" onclick="attendance.quickCheckOut()">
+                            <i class="fas fa-sign-out-alt"></i> تسجيل انصراف
+                        </button>
+                        <div class="filters">
+                            <input type="date" id="att-date-filter" onchange="attendance.filter()">
+                            <select id="att-status-filter" onchange="attendance.filter()">
+                                <option value="">كل الحالات</option>
+                                <option value="present">حاضر</option>
+                                <option value="absent">غائب</option>
+                                <option value="late">متأخر</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>الموظف</th>
+                                        <th>التاريخ</th>
+                                        <th>وقت الحضور</th>
+                                        <th>وقت الانصراف</th>
+                                        <th>الحالة</th>
+                                        <th>الساعات</th>
+                                        <th>الموقع</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendance-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Face Auth Page -->
+                <section id="page-face-auth" class="page">
+                    <div class="face-auth-container">
+                        <div class="face-auth-box">
+                            <h2><i class="fas fa-camera"></i> تسجيل الحضور ببصمة الوجه</h2>
+                            <p>ضع وجهك أمام الكاميرا للتعرف التلقائي</p>
+                            <div class="camera-wrapper">
+                                <video id="face-video" autoplay muted playsinline></video>
+                                <canvas id="face-canvas"></canvas>
+                                <div id="face-overlay">
+                                    <div class="face-frame"></div>
+                                    <p id="face-status">اضغط "تشغيل الكاميرا" للبدء</p>
+                                </div>
+                            </div>
+                            <div class="face-actions">
+                                <button class="btn btn-primary" id="btn-start-camera" onclick="faceAuth.startCamera()">
+                                    <i class="fas fa-video"></i> تشغيل الكاميرا
+                                </button>
+                                <button class="btn btn-success hidden" id="btn-capture" onclick="faceAuth.capture()">
+                                    <i class="fas fa-fingerprint"></i> تسجيل الحضور
+                                </button>
+                                <button class="btn btn-danger hidden" id="btn-stop-camera" onclick="faceAuth.stopCamera()">
+                                    <i class="fas fa-stop"></i> إيقاف الكاميرا
+                                </button>
+                            </div>
+                            <div id="face-results" class="hidden">
+                                <div class="alert" id="face-alert"></div>
+                            </div>
+                        </div>
+                        <div class="registered-faces">
+                            <h3>الموظفين المسجلين ببصمة الوجه</h3>
+                            <div id="faces-list" class="faces-grid"></div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Leaves Page -->
+                <section id="page-leaves" class="page">
+                    <div class="page-actions">
+                        <button class="btn btn-primary" onclick="leaves.openModal()">
+                            <i class="fas fa-plus"></i> طلب إجازة جديد
+                        </button>
+                        <div class="filters">
+                            <select id="leave-status-filter" onchange="leaves.filter()">
+                                <option value="">كل الحالات</option>
+                                <option value="pending">قيد المراجعة</option>
+                                <option value="approved">معتمد</option>
+                                <option value="rejected">مرفوض</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-body">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>الموظف</th>
+                                        <th>نوع الإجازة</th>
+                                        <th>من تاريخ</th>
+                                        <th>إلى تاريخ</th>
+                                        <th>عدد الأيام</th>
+                                        <th>السبب</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="leaves-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Reports Page -->
+                <section id="page-reports" class="page">
+                    <div class="page-actions">
+                        <button class="btn btn-success" onclick="reports.exportPDF()">
+                            <i class="fas fa-file-pdf"></i> تصدير PDF
+                        </button>
+                        <button class="btn btn-success" onclick="reports.exportExcel()">
+                            <i class="fas fa-file-excel"></i> تصدير Excel
+                        </button>
+                    </div>
+                    <div class="reports-filters card">
+                        <div class="card-body">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>الموظف</label>
+                                    <select id="report-employee"></select>
+                                </div>
+                                <div class="form-group">
+                                    <label>من تاريخ</label>
+                                    <input type="date" id="report-from">
+                                </div>
+                                <div class="form-group">
+                                    <label>إلى تاريخ</label>
+                                    <input type="date" id="report-to">
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <button class="btn btn-primary" onclick="reports.generate()">
+                                        <i class="fas fa-chart-bar"></i> إنشاء التقرير
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="report-content" class="hidden">
+                        <div class="card report-card">
+                            <div class="report-header">
+                                <div class="report-logo">
+                                    <i class="fas fa-fingerprint"></i>
+                                    <div>
+                                        <h2>Smart Attendance</h2>
+                                        <p>تقرير الحضور والانصراف</p>
+                                    </div>
+                                </div>
+                                <div class="report-meta">
+                                    <p><strong>تاريخ التقرير:</strong> <span id="report-date"></span></p>
+                                    <p><strong>الموظف:</strong> <span id="report-emp-name"></span></p>
+                                    <p><strong>الفترة:</strong> <span id="report-period"></span></p>
+                                </div>
+                            </div>
+                            <div class="report-stats">
+                                <div class="r-stat">
+                                    <span class="r-label">أيام العمل</span>
+                                    <span class="r-value" id="r-work-days">0</span>
+                                </div>
+                                <div class="r-stat">
+                                    <span class="r-label">الحضور</span>
+                                    <span class="r-value" id="r-present">0</span>
+                                </div>
+                                <div class="r-stat">
+                                    <span class="r-label">الغياب</span>
+                                    <span class="r-value" id="r-absent">0</span>
+                                </div>
+                                <div class="r-stat">
+                                    <span class="r-label">التأخير</span>
+                                    <span class="r-value" id="r-late">0</span>
+                                </div>
+                                <div class="r-stat">
+                                    <span class="r-label">إجمالي الساعات</span>
+                                    <span class="r-value" id="r-hours">0</span>
+                                </div>
+                            </div>
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>الحضور</th>
+                                        <th>الانصراف</th>
+                                        <th>الحالة</th>
+                                        <th>الساعات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="report-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Backup Page -->
+                <section id="page-backup" class="page">
+                    <div class="backup-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-download"></i> تصدير النسخة الاحتياطية</h3>
+                            </div>
+                            <div class="card-body">
+                                <p>حفظ جميع بيانات النظام (الموظفين، الحضور، الإجازات) في ملف JSON</p>
+                                <button class="btn btn-primary btn-block" onclick="backup.exportData()">
+                                    <i class="fas fa-file-export"></i> تصدير البيانات
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-upload"></i> استيراد النسخة الاحتياطية</h3>
+                            </div>
+                            <div class="card-body">
+                                <p>استعادة البيانات من ملف JSON محفوظ سابقاً</p>
+                                <input type="file" id="backup-file" accept=".json" class="form-control">
+                                <button class="btn btn-success btn-block" onclick="backup.importData()">
+                                    <i class="fas fa-file-import"></i> استيراد البيانات
+                                </button>
+                            </div>
+                        </div>
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-trash"></i> إعادة تعيين النظام</h3>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-danger">تحذير: سيتم حذف جميع البيانات نهائياً!</p>
+                                <button class="btn btn-danger btn-block" onclick="backup.resetAll()">
+                                    <i class="fas fa-exclamation-triangle"></i> إعادة التعيين
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Settings Page -->
+                <section id="page-settings" class="page">
+                    <div class="settings-grid">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3><i class="fas fa-map-marker-alt"></i> إعدادات الموقع الجغرافي</h3>
+                            </div>
+                            <div class="card-body">
+                                <p>تحديد موقع المكتب للسماح بتسجيل الحضور فقط من داخل نطاق محدد</p>
+                                
+                                <div class="form-group">
+                                    <label>
+                                        <input type="checkbox" id="loc-enabled" onchange="settings.toggleLocation()">
+                                        تفعيل التحقق من الموقع الجغرافي
+                                    </label>
+                                </div>
+                                
+                                <div id="location-config" class="hidden">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>خط العرض (Latitude)</label>
+                                            <input type="number" id="loc-lat" step="0.00001" placeholder="مثال: 24.71355">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>خط الطول (Longitude)</label>
+                                            <input type="number" id="loc-lng" step="0.00001" placeholder="مثال: 46.67530">
+                                        </div>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label>نصف القطر المسموح (متر)</label>
+                                            <input type="number" id="loc-radius" value="500" min="50" max="5000">
+                                        </div>
+                                        <div class="form-group">
+                                            <label>اسم الموقع</label>
+                                            <input type="text" id="loc-name" value="المكتب الرئيسي">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <button class="btn btn-primary" onclick="settings.detectCurrentLocation()">
+                                            <i class="fas fa-location-arrow"></i> استخدام موقعي الحالي
+                                        </button>
+                                        <p id="loc-status" style="margin-top:10px;color:var(--text-muted);"></p>
+                                    </div>
+                                    <button class="btn btn-success btn-block" onclick="settings.saveLocation()">
+                                        <i class="fas fa-save"></i> حفظ الإعدادات
+                                    </button>
+                                </div>
+                                
+                                <div id="location-info" class="alert hidden" style="margin-top:15px;">
+                                    <p><strong>الموقع الحالي:</strong> <span id="current-loc-name">-</span></p>
+                                    <p><strong>الإحداثيات:</strong> <span id="current-loc-coords">-</span></p>
+                                    <p><strong>نصف القطر:</strong> <span id="current-loc-radius">-</span> متر</p>
+                                    <p><strong>الحالة:</strong> <span id="current-loc-status">-</span></p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Employee Modal -->
+    <div class="modal" id="employee-modal">
+        <div class="modal-overlay" onclick="employees.closeModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="emp-modal-title">إضافة موظف جديد</h3>
+                <button class="modal-close" onclick="employees.closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="employee-form">
+                    <input type="hidden" id="emp-id">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>الاسم الكامل *</label>
+                            <input type="text" id="emp-name" required>
+                        </div>
+                        <div class="form-group">
+                            <label>الرقم الوظيفي *</label>
+                            <input type="text" id="emp-code" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>البريد الإلكتروني</label>
+                            <input type="email" id="emp-email">
+                        </div>
+                        <div class="form-group">
+                            <label>رقم الهاتف</label>
+                            <input type="tel" id="emp-phone">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>القسم *</label>
+                            <select id="emp-department" required>
+                                <option value="">اختر القسم</option>
+                                <option value="IT">تقنية المعلومات</option>
+                                <option value="HR">الموارد البشرية</option>
+                                <option value="Finance">المالية</option>
+                                <option value="Marketing">التسويق</option>
+                                <option value="Sales">المبيعات</option>
+                                <option value="Operations">العمليات</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>الدور / الصلاحية *</label>
+                            <select id="emp-role" required>
+                                <option value="employee">موظف</option>
+                                <option value="supervisor">مشرف</option>
+                                <option value="hr_manager">مدير موارد بشرية</option>
+                                <option value="admin">مدير النظام</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>تاريخ التعيين *</label>
+                            <input type="date" id="emp-hire-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>الراتب الأساسي</label>
+                            <input type="number" id="emp-salary">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>الصورة</label>
+                        <input type="file" id="emp-photo" accept="image/*">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="employees.closeModal()">إلغاء</button>
+                <button class="btn btn-primary" onclick="employees.save()">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leave Modal -->
+    <div class="modal" id="leave-modal">
+        <div class="modal-overlay" onclick="leaves.closeModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>طلب إجازة جديد</h3>
+                <button class="modal-close" onclick="leaves.closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="leave-form">
+                    <div class="form-group">
+                        <label>الموظف *</label>
+                        <select id="leave-employee" required></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>نوع الإجازة *</label>
+                            <select id="leave-type" required>
+                                <option value="annual">سنوية</option>
+                                <option value="sick">مرضية</option>
+                                <option value="emergency">طارئة</option>
+                                <option value="unpaid">بدون راتب</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>عدد الأيام</label>
+                            <input type="number" id="leave-days" readonly>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>من تاريخ *</label>
+                            <input type="date" id="leave-from" required>
+                        </div>
+                        <div class="form-group">
+                            <label>إلى تاريخ *</label>
+                            <input type="date" id="leave-to" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>السبب</label>
+                        <textarea id="leave-reason" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="leaves.closeModal()">إلغاء</button>
+                <button class="btn btn-primary" onclick="leaves.save()">إرسال الطلب</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Attendance Modal -->
+    <div class="modal" id="attendance-modal">
+        <div class="modal-overlay" onclick="attendance.closeModal()"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="att-modal-title">تسجيل حضور</h3>
+                <button class="modal-close" onclick="attendance.closeModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>اختر الموظف *</label>
+                    <select id="att-employee" required></select>
+                </div>
+                <div class="form-group">
+                    <label>الوقت</label>
+                    <input type="time" id="att-time">
+                </div>
+                <div class="form-group">
+                    <label>الملاحظات</label>
+                    <textarea id="att-notes" rows="2"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="attendance.closeModal()">إلغاء</button>
+                <button class="btn btn-primary" id="att-confirm-btn" onclick="attendance.confirm()">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container"></div>
+
+    <script src="js/app.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/employees.js"></script>
+    <script src="js/attendance.js"></script>
+    <script src="js/faceAuth.js"></script>
+    <script src="js/reports.js"></script>
+    <script src="js/leaves.js"></script>
+    <script src="js/backup.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/employeePortal.js"></script>
+</body>
+</html>
+
